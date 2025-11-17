@@ -9,6 +9,7 @@ import {
 import { Box, Button, Flex, Menu, Text, Title } from '@mantine/core';
 import { IconUserCircle, IconSend, IconEdit } from '@tabler/icons-react';
 import { data, type Employee } from './makeData';
+import * as XLSX from 'xlsx';
 
 const EmployeeTable = () => {
   const columns = useMemo<MRT_ColumnDef<Employee>[]>(
@@ -207,6 +208,48 @@ const EmployeeTable = () => {
         });
       };
 
+      const handleExportToExcel = () => {
+        // Get all visible rows (respects current filters and sorting)
+        const visibleRows = table.getFilteredRowModel().rows;
+
+        // Prepare data for Excel
+        const excelData = visibleRows.map((row) => {
+          const employee = row.original;
+          return {
+            Name: `${employee.firstName} ${employee.lastName}`,
+            Email: employee.email,
+            Salary: employee.salary,
+            'Job Title': employee.jobTitle,
+            'Start Date': employee.startDate,
+            'Signature Catch Phrase': employee.signatureCatchPhrase,
+          };
+        });
+
+        // Create worksheet from data
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+        // Set column widths for better readability
+        worksheet['!cols'] = [
+          { wch: 20 }, // Name
+          { wch: 30 }, // Email
+          { wch: 12 }, // Salary
+          { wch: 25 }, // Job Title
+          { wch: 15 }, // Start Date
+          { wch: 40 }, // Signature Catch Phrase
+        ];
+
+        // Create workbook and add worksheet
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Employees');
+
+        // Generate filename with current date
+        const date = new Date().toISOString().split('T')[0];
+        const filename = `employees_${date}.xlsx`;
+
+        // Write and download file
+        XLSX.writeFile(workbook, filename);
+      };
+
       return (
         <Flex p="md" justify="space-between">
           <Flex gap="xs">
@@ -240,6 +283,7 @@ const EmployeeTable = () => {
             <Button
               color="blue"
               variant="filled"
+              onClick={handleExportToExcel}
             >
               Export
             </Button>
