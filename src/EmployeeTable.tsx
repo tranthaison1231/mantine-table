@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   MantineReactTable,
   useMantineReactTable,
@@ -8,10 +8,13 @@ import {
 } from 'mantine-react-table';
 import { Box, Button, Flex, Menu, Text, Title } from '@mantine/core';
 import { IconUserCircle, IconSend, IconEdit } from '@tabler/icons-react';
-import { data, type Employee } from './makeData';
+import { data as initialData, type Employee } from './makeData';
 import * as XLSX from 'xlsx';
 
 const EmployeeTable = () => {
+  // State to hold editable data
+  const [employeeData, setEmployeeData] = useState<Employee[]>(initialData);
+
   const columns = useMemo<MRT_ColumnDef<Employee>[]>(
     () => [
       {
@@ -24,6 +27,7 @@ const EmployeeTable = () => {
             header: 'Name',
             size: 250,
             filterVariant: 'autocomplete',
+            enableEditing: true,
             Cell: ({ renderedCellValue }) => (
               <Box
                 style={{
@@ -39,6 +43,7 @@ const EmployeeTable = () => {
           {
             accessorKey: 'email', // accessorKey used to define `data` column. `id` gets set to accessorKey automatically
             enableClickToCopy: true,
+            enableEditing: true,
             header: 'Email',
             size: 300,
           },
@@ -52,6 +57,7 @@ const EmployeeTable = () => {
             accessorKey: 'salary',
             header: 'Salary',
             size: 200,
+            enableEditing: true,
             filterVariant: 'range-slider',
             mantineFilterRangeSliderProps: {
               color: 'indigo',
@@ -92,6 +98,7 @@ const EmployeeTable = () => {
           {
             accessorKey: 'jobTitle',
             header: 'Job Title',
+            enableEditing: true,
             filterVariant: 'multi-select',
             size: 350,
           },
@@ -105,6 +112,7 @@ const EmployeeTable = () => {
             id: 'startDate',
             header: 'Start Date',
             size: 250,
+            enableEditing: true,
             filterVariant: 'date-range',
             sortingFn: 'datetime',
             enableColumnFilterModes: false, // keep this as only date-range filter with between inclusive filterFn
@@ -120,9 +128,38 @@ const EmployeeTable = () => {
     []
   );
 
+  // Handler for cell edits
+  const handleSaveCell = (cell: any, value: any) => {
+    const rowIndex = cell.row.index;
+    const columnId = cell.column.id;
+
+    setEmployeeData((prev) => {
+      const newData = [...prev];
+      const employee = { ...newData[rowIndex] };
+
+      // Update the appropriate field based on column
+      if (columnId === 'name') {
+        const [firstName, ...lastNameParts] = value.split(' ');
+        employee.firstName = firstName || '';
+        employee.lastName = lastNameParts.join(' ') || '';
+      } else if (columnId === 'email') {
+        employee.email = value;
+      } else if (columnId === 'salary') {
+        employee.salary = Number(value) || 0;
+      } else if (columnId === 'jobTitle') {
+        employee.jobTitle = value;
+      } else if (columnId === 'startDate') {
+        employee.startDate = value;
+      }
+
+      newData[rowIndex] = employee;
+      return newData;
+    });
+  };
+
   const table = useMantineReactTable({
     columns,
-    data, // must be memoized or stable (useState, useMemo, defined outside of this component, etc.)
+    data: employeeData, // Use state data for editing
     // enableColumnFilterModes: true,
     enableColumnOrdering: true,
     enableFacetedValues: true,
@@ -130,6 +167,11 @@ const EmployeeTable = () => {
     enableEditing: true,
     enablePinning: true,
     editDisplayMode: 'table',
+    mantineEditTextInputProps: ({ cell }) => ({
+      onBlur: (event) => {
+        handleSaveCell(cell, event.target.value);
+      },
+    }),
     enableRowActions: true,
     enableRowSelection: true,
     enableColumnResizing: true,
@@ -209,11 +251,14 @@ const EmployeeTable = () => {
       };
 
       const handleExportToExcel = () => {
-        // Get all visible rows (respects current filters and sorting)
-        const visibleRows = table.getFilteredRowModel().rows;
+        // Get selected rows if any, otherwise get all visible/filtered rows
+        const selectedRows = table.getSelectedRowModel().flatRows;
+        const rowsToExport = selectedRows.length > 0
+          ? selectedRows
+          : table.getFilteredRowModel().rows;
 
         // Prepare data for Excel
-        const excelData = visibleRows.map((row) => {
+        const excelData = rowsToExport.map((row) => {
           const employee = row.original;
           return {
             Name: `${employee.firstName} ${employee.lastName}`,
@@ -242,12 +287,18 @@ const EmployeeTable = () => {
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Employees');
 
-        // Generate filename with current date
+        // Generate filename with current date and selection info
         const date = new Date().toISOString().split('T')[0];
-        const filename = `employees_${date}.xlsx`;
+        const selectionText = selectedRows.length > 0 ? `_selected_${selectedRows.length}` : '';
+        const filename = `employees${selectionText}_${date}.xlsx`;
 
         // Write and download file
         XLSX.writeFile(workbook, filename);
+
+        // Show success message
+        if (selectedRows.length > 0) {
+          alert(`Exported ${selectedRows.length} selected row(s) to Excel!`);
+        }
       };
 
       return (
