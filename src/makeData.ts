@@ -104,4 +104,4 @@ const makeData = (numberOfEmployees: number): Employee[] => {
 };
 
 // Export pre-generated data
-export const data: Employee[] = makeData(100);
+export const data: Employee[] = makeData(10000);

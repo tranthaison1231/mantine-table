@@ -205,9 +205,9 @@ const EmployeeTable = () => {
     ),
     renderRowActionMenuItems: () => (
       <>
-        <Menu.Item leftSection={<IconEdit />}>Edit</Menu.Item>
-        <Menu.Item leftSection={<IconUserCircle />}>View Profile</Menu.Item>
-        <Menu.Item leftSection={<IconSend />}>Send Email</Menu.Item>
+        <Menu.Item disabled={true} leftSection={<IconEdit />}>Edit</Menu.Item>
+        <Menu.Item disabled={true} leftSection={<IconUserCircle />}>View Profile</Menu.Item>
+        <Menu.Item disabled={true} leftSection={<IconSend />}>Send Email</Menu.Item>
       </>
     ),
     renderTopToolbar: ({ table }) => {
@@ -319,7 +319,7 @@ const EmployeeTable = () => {
             </Button>
             <Button
               color="green"
-              disabled={!table.getIsSomeRowsSelected()}
+              disabled={true}
               onClick={handleActivate}
               variant="filled"
             >
@@ -327,6 +327,7 @@ const EmployeeTable = () => {
             </Button>
             <Button
               color="blue"
+              disabled={true}
               variant="filled"
             >
               Add
